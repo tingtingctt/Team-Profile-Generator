@@ -4,15 +4,123 @@ const Intern = require("./lib/Intern");
 const inquirer = require("inquirer");
 const path = require("path");
 const fs = require("fs");
+const util = require('util');
+
+fs.writeFile = util.promisify(fs.writeFile)
 
 const OUTPUT_DIR = path.resolve(__dirname, "output");
 const outputPath = path.join(OUTPUT_DIR, "team.html");
 
 const render = require("./lib/htmlRenderer");
 
-
+const classes = {
+    Engineer,
+    Intern
+}
 // Write code to use inquirer to gather information about the development team members,
 // and to create objects for each team member (using the correct classes as blueprints!)
+console.log("Please build your team.");
+
+const employees = [];
+
+
+async function init(){
+   const data = await inquirer.prompt ([
+        {
+            type: "input",
+            name: "name",
+            message: "What is your manager's name?"
+        },
+        {
+            type: "input",
+            name: "id",
+            message: "What is your manager's id?"
+        },
+        {
+            type: "input",
+            name: "email",
+            message: "What is your manager's email?"
+        },
+        {
+            type: "input",
+            name: "officeNumber",
+            message: "What is your manager's office number?"
+        }
+    ])
+    const manager = new Manager (data.name, data.id, data.email, data.officeNumber);
+    employees.push(manager);
+    main()
+}
+
+async function main(){
+    try{
+      const {role} = await inquirer.prompt (
+        {
+            type: "list",
+            message: "What type of team member would you like to add?",
+            name: "role",
+            choices: [
+              "Engineer",
+              "Intern",
+              "Finish"
+            ]
+        })  
+        role === "Finish" ? makeTeam() : askInfo(makePrompt(role))
+    }catch(err){
+        throw err;
+    }
+}
+
+async function makeTeam(){
+    try{
+       await fs.writeFile(outputPath, render(employees));
+        console.log('yay success!');
+    }catch(err){
+        throw err;
+    }
+}
+
+function makePrompt(title){
+    const base = [
+        {
+            type: "input",
+            name: "name",
+            message: `What is your ${title}'s name?`
+        },
+        {
+            type: "input",
+            name: "id",
+            message: `What is your ${title}'s id?`
+        },
+        {
+            type: "input",
+            name: "email",
+            message: `What is your ${title}'s email?`
+        } 
+    ]
+    base.push(title=== "Engineer" ? {
+        type: "input",
+        name: "extra",
+        message: "What is your Engineer's GitHub username?"
+    } : {
+        type: "input",
+        name: "extra",
+        message: "What is your Intern's School?"
+    })
+    return {base, title}
+}
+
+    async function askInfo({base,title}){
+        const data = await inquirer.prompt(base);
+        var newEmp = new classes[title] (data.name, data.id, data.email, data.extra);
+        employees.push(newEmp);
+        setTimeout(main, 1000)
+    }
+
+    init()
+
+
+
 
 // After the user has input all employees desired, call the `render` function (required
 // above) and pass in an array containing all employee objects; the `render` function will
