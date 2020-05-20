@@ -13,17 +13,12 @@ const outputPath = path.join(OUTPUT_DIR, "team.html");
 
 const render = require("./lib/htmlRenderer");
 
-const classes = {
-    Engineer,
-    Intern
-}
-// Write code to use inquirer to gather information about the development team members,
-// and to create objects for each team member (using the correct classes as blueprints!)
+// to start prompting
 console.log("Please build your team.");
 
 const employees = [];
 
-
+// initiate by prompting mandatory manager info
 async function init(){
    const data = await inquirer.prompt ([
         {
@@ -49,10 +44,11 @@ async function init(){
     ])
     const manager = new Manager (data.name, data.id, data.email, data.officeNumber);
     employees.push(manager);
-    main()
+    loopPrompt()
 }
 
-async function main(){
+// after manager's info is entered, start looping prompts until user chooses "Finish"
+async function loopPrompt(){
     try{
       const {role} = await inquirer.prompt (
         {
@@ -71,34 +67,37 @@ async function main(){
     }
 }
 
+// generate team.html after user select "Finish"
 async function makeTeam(){
     try{
        await fs.writeFile(outputPath, render(employees));
-        console.log('yay success!');
+        console.log('Team profile page has been successfully generated.');
     }catch(err){
         throw err;
     }
 }
 
-function makePrompt(title){
-    const base = [
+// Passing in a "role" parameter, we push the "extra" Engineer/Intern-specific question to a basic array of questions
+function makePrompt(role){
+    const questions = [
         {
             type: "input",
             name: "name",
-            message: `What is your ${title}'s name?`
+            message: `What is your ${role}'s name?`
         },
         {
             type: "input",
             name: "id",
-            message: `What is your ${title}'s id?`
+            message: `What is your ${role}'s id?`
         },
         {
             type: "input",
             name: "email",
-            message: `What is your ${title}'s email?`
+            message: `What is your ${role}'s email?`
         } 
     ]
-    base.push(title=== "Engineer" ? {
+
+    questions.push(role=== "Engineer" ? {
         type: "input",
         name: "extra",
         message: "What is your Engineer's GitHub username?"
@@ -107,37 +106,26 @@ function makePrompt(title){
         name: "extra",
         message: "What is your Intern's School?"
     })
-    return {base, title}
+
+    return {questions, role}
 }
 
-    async function askInfo({base,title}){
-        const data = await inquirer.prompt(base);
-        var newEmp = new classes[title] (data.name, data.id, data.email, data.extra);
-        employees.push(newEmp);
-        setTimeout(main, 1000)
-    }
+//sub-classes constructors to be called on depending on the same "role" parameter entered
+const classes = {
+    Engineer,
+    Intern
+}
 
-    init()
+// Depending on the same "role" parameter passed in, ask role-specific questions, 
+// then call sub-class constructors, and finally push the info object to employees array
+// wait 1s, then loop
+async function askInfo({questions,role}){
+    const data = await inquirer.prompt(questions);
+    var newEmp = new classes[role] (data.name, data.id, data.email, data.extra);
+    employees.push(newEmp);
+    setTimeout(loopPrompt, 1000)
+}
+
+init()
 
 
-
-
-// After the user has input all employees desired, call the `render` function (required
-// above) and pass in an array containing all employee objects; the `render` function will
-// generate and return a block of HTML including templated divs for each employee!
-
-// After you have your html, you're now ready to create an HTML file using the HTML
-// returned from the `render` function. Now write it to a file named `team.html` in the
-// `output` folder. You can use the variable `outputPath` above target this location.
-// Hint: you may need to check if the `output` folder exists and create it if it
-// does not.
-
-// HINT: each employee type (manager, engineer, or intern) has slightly different
-// information; write your code to ask different questions via inquirer depending on
-// employee type.
-
-// HINT: make sure to build out your classes first! Remember that your Manager, Engineer,
-// and Intern classes should all extend from a class named Employee; see the directions
-// for further information. Be sure to test out each class and verify it generates an
-// object with the correct structure and methods. This structure will be crucial in order
-// for the provided `render` function to work! ```
